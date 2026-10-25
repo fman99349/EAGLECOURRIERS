@@ -41,3 +41,11 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`🦅 EagleCourier API → http://localhost:${PORT}`);
 });
+
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://https://eaglecourrier.netlify.app/', // <-- Make sure this matches perfectly
+  'https://your-web-site.netlify.app'
+];
