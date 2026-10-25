@@ -31,7 +31,7 @@ export default function App() {
     setData(null);
 
     try {
-      const res = await fetch(`http://localhost:4000/api/track/${trackingNumber.trim()}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/track/${trackingNumber.trim()}`);
       const json = await res.json();
       
       if (!res.ok) throw new Error(json.error || 'Failed to track');
