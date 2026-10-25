@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Package, MapPin, CheckCircle2, ChevronRight, Loader2, Info, ArrowRight, X } from 'lucide-react';
+import { Search, CheckCircle2, Loader2, Info, X } from 'lucide-react';
 
 const STEPS = [
   { slug: 'placed', label: 'Placed' },
@@ -8,7 +8,6 @@ const STEPS = [
   { slug: 'delivered', label: 'Delivered' },
 ];
 
-// 🦅 Brand Logo (Same as admin)
 const EagleMark = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 6l9 6-9 6M12 6l9 6-9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -31,7 +30,9 @@ export default function App() {
     setData(null);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/track/${trackingNumber.trim()}`);
+      // Use Vite environment variable, fallback to localhost if not set locally
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${apiUrl}/api/track/${trackingNumber.trim()}`);
       const json = await res.json();
       
       if (!res.ok) throw new Error(json.error || 'Failed to track');
@@ -44,14 +45,12 @@ export default function App() {
     }
   }
 
-  // Calculate progress bar state
   const currentStepIndex = data ? STEPS.findIndex((s) => s.slug === data.order.status_slug) : -1;
   const isOnHold = data && (data.order.status_slug.includes('pending') || data.order.status_slug === 'parked');
   const activeStep = currentStepIndex === -1 ? (isOnHold ? 1 : 0) : currentStepIndex;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Header */}
       <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-white">
@@ -66,10 +65,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-8 flex flex-col">
-        
-        {/* Hero / Search */}
         <div className={`transition-all duration-500 ease-in-out ${data || loading ? 'mb-6' : 'mt-10 mb-12'}`}>
           {!data && !loading && (
             <div className="text-center mb-8">
@@ -105,11 +101,8 @@ export default function App() {
           )}
         </div>
 
-        {/* Results View */}
         {data && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 space-y-6 pb-12">
-            
-            {/* Status Card */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -128,7 +121,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Progress Bar */}
               <div className="flex items-center justify-between relative mt-8 mb-2 px-2">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-800 -z-10" />
                 <div 
@@ -158,7 +150,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Route & Details */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
               <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center gap-1 mt-1">
@@ -189,7 +180,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Timeline */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <h3 className="text-sm font-semibold text-slate-300 mb-6">Tracking History</h3>
               <ol className="space-y-6">
@@ -221,7 +211,6 @@ export default function App() {
         )}
       </main>
 
-      {/* About Us Modal */}
       {showAbout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-200">
