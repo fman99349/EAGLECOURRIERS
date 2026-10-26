@@ -51,11 +51,11 @@ export default function Dashboard() {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !data.totals) {
     return (
       <AdminLayout>
         <div className="bg-red-950/40 border border-red-900 text-red-300 text-sm rounded-md px-4 py-3">
-          {error || 'Failed to load dashboard'}
+          {error || 'Failed to load dashboard data.'}
         </div>
       </AdminLayout>
     );

@@ -19,6 +19,7 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [validStatuses, setValidStatuses] = useState([]);
   const [newStatus, setNewStatus] = useState('');
+  const [location, setLocation] = useState(''); // 🆕 New state for location
   const [note, setNote] = useState('');
   const [updating, setUpdating] = useState(false);
 
@@ -57,20 +58,24 @@ export default function Orders() {
     }
   }
 
-  // 🔥 UPDATED: Fetch ALL active statuses
   async function openEditModal(order) {
     setEditingOrder(order);
     setNewStatus('');
     setNote('');
     try {
-      const res = await api.get('/statuses');
-      setValidStatuses(res.data.statuses);
+      const res = await api.get(`/orders/${order.id}`);
+      setValidStatuses(res.data.statuses || []); // Fallback if fetching all
+      // Fetch all statuses for the dropdown
+      const allStatusesRes = await api.get('/statuses');
+      setValidStatuses(allStatusesRes.data.statuses);
+      
+      // Pre-fill current location
+      setLocation(res.data.order.current_location || '');
     } catch (err) {
       alert('Failed to load status options');
     }
   }
 
-  // 🔥 UPDATED: Send force_override to bypass state machine
   async function handleUpdateStatus(e) {
     e.preventDefault();
     if (!newStatus) return;
@@ -79,7 +84,8 @@ export default function Orders() {
       await api.post(`/orders/${editingOrder.id}/status`, {
         to_status_slug: newStatus,
         note: note || undefined,
-        force_override: true
+        force_override: true,
+        current_location: location // 🆕 Send location to backend
       });
       setEditingOrder(null);
       load(search, page);
@@ -94,7 +100,6 @@ export default function Orders() {
 
   return (
     <AdminLayout>
-      {/* Header */}
       <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold text-slate-100">Items</h2>
@@ -105,7 +110,6 @@ export default function Orders() {
         </Link>
       </div>
 
-      {/* Search */}
       <form onSubmit={handleSearch} className="mb-3 flex gap-2">
         <input
           type="text"
@@ -121,7 +125,6 @@ export default function Orders() {
 
       {error && <div className="bg-red-950/40 border border-red-900/60 text-red-300 text-sm rounded-md px-4 py-3 mb-3">{error}</div>}
 
-      {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-slate-500 animate-spin" /></div>
       ) : orders.length === 0 ? (
@@ -132,7 +135,7 @@ export default function Orders() {
         </div>
       ) : (
         <div className="bg-slate-900/50 border border-slate-800 rounded-lg overflow-x-auto">
-  <table className="w-full text-sm min-w-[700px]">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-slate-900 border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium">Tracking #</th>
@@ -171,7 +174,6 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-xs text-slate-500">Page {page + 1} of {totalPages}</span>
@@ -190,8 +192,6 @@ export default function Orders() {
       {editingOrder && (
         <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-sm shadow-2xl my-8 sm:my-0 relative">
-            
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-800">
               <h3 className="text-base font-semibold text-slate-100">Update Status</h3>
               <button onClick={() => setEditingOrder(null)} className="text-slate-500 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors">
@@ -199,10 +199,7 @@ export default function Orders() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleUpdateStatus} className="p-4 sm:p-5 space-y-4">
-              
-              {/* Item Info */}
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-md">
                 <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Item</div>
                 <div className="text-sm text-slate-200 font-medium truncate">{editingOrder.item_name}</div>
@@ -216,15 +213,28 @@ export default function Orders() {
                   {validStatuses.map(s => <option key={s.id} value={s.slug}>{s.customer_label}</option>)}
                 </select>
               </div>
+
+              {/* 🆕 Current Location Input */}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Current Location *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={location} 
+                  onChange={e => setLocation(e.target.value)} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500" 
+                  placeholder="e.g. London Heathrow Hub" 
+                />
+              </div>
               
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">Note (optional)</label>
-                <textarea rows={2} value={note} onChange={e => setNote(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none" placeholder="Add a note..." />
+                <textarea rows={2} value={note} onChange={e => setNote(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none" placeholder="Message for the customer..." />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setEditingOrder(null)} className="px-4 py-2 text-sm text-slate-300 hover:text-white transition">Cancel</button>
-                <button type="submit" disabled={updating || !newStatus} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition">
+                <button type="submit" disabled={updating || !newStatus || !location} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition">
                   {updating ? 'Saving...' : 'Update Status'}
                 </button>
               </div>

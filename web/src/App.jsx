@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, CheckCircle2, Loader2, Info, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Package, Check, Loader2, Info, X, ShieldCheck, Globe, Clock } from 'lucide-react';
 
 const STEPS = [
   { slug: 'placed', label: 'Placed' },
@@ -8,11 +8,20 @@ const STEPS = [
   { slug: 'delivered', label: 'Delivered' },
 ];
 
-const EagleMark = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 6l9 6-9 6M12 6l9 6-9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+// Typewriter Hook for About Us
+function useTypewriter(text, speed = 50) {
+  const [displayed, setDisplayed] = useState('');
+  useEffect(() => {
+    let i = 0;
+    const timer = setInterval(() => {
+      setDisplayed((prev) => prev + text.charAt(i));
+      i++;
+      if (i === text.length) clearInterval(timer);
+    }, speed);
+    return () => clearInterval(timer);
+  }, [text, speed]);
+  return displayed;
+}
 
 export default function App() {
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -20,22 +29,40 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAbout, setShowAbout] = useState(false);
+  
+  const typedTitle = useTypewriter('EagleCourier International Shipping Services');
 
-  async function handleTrack(e) {
-    e.preventDefault();
-    if (!trackingNumber.trim()) return;
+  // Handle URL Auto-fill (e.g. ?track=EGL-XXXX)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const trackParam = params.get('track');
+    if (trackParam) {
+      setTrackingNumber(trackParam);
+      handleTrack(null, trackParam);
+    }
+  }, []);
+
+  async function handleTrack(e, overrideNumber = null) {
+    if (e) e.preventDefault();
+    const numToTrack = overrideNumber || trackingNumber;
+    if (!numToTrack.trim()) return;
 
     setLoading(true);
     setError('');
     setData(null);
 
     try {
-      // Use Vite environment variable, fallback to localhost if not set locally
+      // 🆕 Strip hyphens and spaces for a smarter search
+      const cleanNumber = numToTrack.replace(/[-\s]/g, '').trim();
+      
+      // Fallback to localhost if env variable is missing
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      const res = await fetch(`${apiUrl}/api/track/${trackingNumber.trim()}`);
+      
+      // Note: We pass cleanNumber to the backend
+      const res = await fetch(`${apiUrl}/api/track/${cleanNumber}`);
       const json = await res.json();
       
-      if (!res.ok) throw new Error(json.error || 'Failed to track');
+      if (!res.ok) throw new Error(json.error || 'Shipment not found');
       
       setData(json);
     } catch (err) {
@@ -50,97 +77,103 @@ export default function App() {
   const activeStep = currentStepIndex === -1 ? (isOnHold ? 1 : 0) : currentStepIndex;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-40">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
+      
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <EagleMark size={18} />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+              <Package size={18} />
             </div>
             <span className="font-bold text-lg tracking-tight">EagleCourier</span>
           </div>
-          <button onClick={() => setShowAbout(true)} className="text-sm font-medium text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
-            <Info size={16} /> About Us
+          <button onClick={() => setShowAbout(true)} className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5">
+            <Info size={16} /> About
           </button>
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-md mx-auto px-4 py-8 flex flex-col">
-        <div className={`transition-all duration-500 ease-in-out ${data || loading ? 'mb-6' : 'mt-10 mb-12'}`}>
+      <main className="w-full max-w-md mx-auto px-4 py-12 flex flex-col">
+        
+        {/* Search Box */}
+        <div className={`transition-all duration-500 ${data || loading ? 'mb-6' : 'mt-10 mb-12'}`}>
           {!data && !loading && (
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Track your shipment</h1>
-              <p className="text-slate-400">Enter your tracking number below to see the latest updates.</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Track your shipment</h1>
+              <p className="text-slate-500 text-sm">Enter your tracking number below.</p>
             </div>
           )}
 
-          <form onSubmit={handleTrack} className="relative">
+          <form onSubmit={handleTrack} className="relative shadow-sm">
             <div className="relative flex items-center">
-              <Search className="absolute left-4 text-slate-500" size={20} />
+              <Search className="absolute left-4 text-slate-400" size={20} />
               <input
                 type="text"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
-                placeholder="e.g. EGL-ABCD-1234"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl py-4 pl-12 pr-32 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-lg font-mono uppercase transition-all"
+                placeholder="Enter tracking number"
+                className="w-full bg-white border border-slate-300 rounded-xl py-4 pl-12 pr-32 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-lg font-mono transition-all placeholder:font-sans placeholder:text-base"
               />
               <button
                 type="submit"
                 disabled={loading || !trackingNumber}
-                className="absolute right-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                className="absolute right-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
               >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : 'Track'}
               </button>
             </div>
           </form>
 
-          {error && (
-            <div className="mt-4 p-4 bg-red-950/40 border border-red-900/60 rounded-xl text-red-300 text-sm text-center">
-              {error}
-            </div>
-          )}
+          {error && <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm text-center font-medium">{error}</div>}
         </div>
 
+        {/* Results */}
         {data && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 space-y-6 pb-12">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
+            
+            {/* Progress Card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
                 <div>
-                  <div className="text-xs font-mono text-blue-400 mb-1">{data.order.order_number}</div>
-                  <h2 className="text-xl font-bold text-white">{data.order.item_name}</h2>
+                  <div className="text-xs font-bold text-blue-600 mb-1 tracking-wider">{data.order.order_number}</div>
+                  <h2 className="text-xl font-bold text-slate-900">{data.order.item_name}</h2>
                 </div>
-                <div 
-                  className="px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap"
-                  style={{ 
-                    backgroundColor: `${data.order.status_color}15`, 
-                    borderColor: `${data.order.status_color}40`, 
-                    color: data.order.status_color 
-                  }}
-                >
+                <div className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-bold whitespace-nowrap">
                   {data.order.status_label}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between relative mt-8 mb-2 px-2">
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-800 -z-10" />
+              {/* 🆕 Current Location Tiny Text */}
+              <div className="mb-8 flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <Globe size={14} className="text-blue-500" />
+                <span className="font-medium text-slate-700">Current Location:</span> 
+                {data.order.current_location || 'In Transit'}
+              </div>
+
+              {/* Stepper with Ticks and Pulsing Dot */}
+              <div className="flex items-center justify-between relative mt-4">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 -z-10 rounded-full" />
                 <div 
-                  className={`absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-700 -z-10 ${isOnHold ? 'bg-amber-500' : 'bg-blue-500'}`}
+                  className={`absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-700 -z-10 rounded-full ${isOnHold ? 'bg-amber-500' : 'bg-blue-600'}`}
                   style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }} 
                 />
                 {STEPS.map((step, idx) => {
                   const isCompleted = idx < activeStep;
                   const isActive = idx === activeStep;
                   return (
-                    <div key={step.slug} className="flex flex-col items-center gap-2 bg-slate-900 py-1 px-2 rounded-lg">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                        isCompleted ? 'bg-blue-500 text-white' : 
-                        isActive ? (isOnHold ? 'bg-amber-500 text-white border-2 border-amber-300' : 'bg-blue-500 text-white border-2 border-blue-300') : 
-                        'bg-slate-800 text-slate-500 border border-slate-700'
+                    <div key={step.slug} className="flex flex-col items-center gap-2 bg-white px-2">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                        isCompleted ? 'bg-blue-600 text-white' : 
+                        isActive ? (isOnHold ? 'bg-amber-100 text-amber-600 border-2 border-amber-500' : 'bg-blue-100 text-blue-600 border-2 border-blue-600') : 
+                        'bg-slate-100 text-slate-400 border border-slate-200'
                       }`}>
-                        {isCompleted ? <CheckCircle2 size={12} /> : idx + 1}
+                        {isCompleted ? <Check size={14} strokeWidth={3} /> : 
+                         isActive ? <div className={`w-2 h-2 rounded-full animate-pulse ${isOnHold ? 'bg-amber-500' : 'bg-blue-600'}`} /> : 
+                         idx + 1}
                       </div>
-                      <span className={`text-[10px] font-medium uppercase tracking-wider ${
-                        isActive ? (isOnHold ? 'text-amber-400' : 'text-blue-400') : isCompleted ? 'text-slate-300' : 'text-slate-600'
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                        isActive ? (isOnHold ? 'text-amber-600' : 'text-blue-600') : isCompleted ? 'text-slate-700' : 'text-slate-400'
                       }`}>
                         {step.label}
                       </span>
@@ -150,83 +183,88 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <div className="flex items-start gap-4">
+            {/* Details Card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+              <div className="pt-2 flex items-start gap-4">
                 <div className="flex flex-col items-center gap-1 mt-1">
-                  <div className="w-3 h-3 rounded-full border-2 border-blue-500 bg-slate-900" />
-                  <div className="w-0.5 h-8 bg-slate-700" />
-                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-400 bg-white" />
+                  <div className="w-0.5 h-6 bg-slate-200" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                 </div>
-                <div className="flex flex-col justify-between h-14 w-full">
-                  <div className="text-sm text-slate-400 flex justify-between">
-                    <span>From</span>
-                    <span className="text-slate-200 font-medium text-right max-w-[60%]">{data.order.from_location}</span>
+                <div className="flex flex-col justify-between h-12 w-full text-sm">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Origin</span>
+                    <span className="text-slate-900 font-medium">{data.order.from_location}</span>
                   </div>
-                  <div className="text-sm text-slate-400 flex justify-between">
-                    <span>To</span>
-                    <span className="text-slate-200 font-medium text-right max-w-[60%]">{data.order.to_location}</span>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Destination</span>
+                    <span className="text-slate-900 font-medium">{data.order.to_location}</span>
                   </div>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-800 grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-slate-500">Recipient</div>
-                  <div className="text-sm text-slate-200 mt-0.5">{data.order.first_name} {data.order.last_name}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Declared Value</div>
-                  <div className="text-sm text-slate-200 mt-0.5">{data.order.currency} {Number(data.order.declared_value).toFixed(2)}</div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-sm font-semibold text-slate-300 mb-6">Tracking History</h3>
+            {/* Timeline */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">History</h3>
               <ol className="space-y-6">
                 {data.events.map((ev, idx) => (
                   <li key={idx} className="relative flex gap-4">
                     {idx !== data.events.length - 1 && (
-                      <div className="absolute left-[11px] top-6 bottom-[-24px] w-0.5 bg-slate-800" />
+                      <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
                     )}
-                    <div className="relative z-10 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${ev.color}20`, border: `1px solid ${ev.color}` }}>
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ev.color }} />
+                    <div className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-blue-50 border border-blue-200">
+                      <Check size={10} className="text-blue-600" strokeWidth={3} />
                     </div>
-                    <div className="pb-2">
-                      <div className="text-sm font-semibold text-slate-200">{ev.label}</div>
-                      {ev.note && <p className="text-sm text-slate-400 mt-1">{ev.note}</p>}
-                      <div className="text-xs text-slate-500 mt-1">{new Date(ev.created_at).toLocaleString()}</div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900">{ev.label}</div>
+                      {ev.note && <p className="text-sm text-slate-500 mt-1">{ev.note}</p>}
+                      <div className="text-xs text-slate-400 font-medium mt-1">{new Date(ev.created_at).toLocaleString()}</div>
                     </div>
                   </li>
                 ))}
               </ol>
             </div>
 
-            <button 
-              onClick={() => { setData(null); setTrackingNumber(''); }}
-              className="w-full py-4 text-center text-sm text-slate-400 hover:text-white transition-colors"
-            >
+            <button onClick={() => { setData(null); setTrackingNumber(''); }} className="w-full py-4 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
               Track another shipment
             </button>
           </div>
         )}
       </main>
 
+      {/* Professional About Us Modal */}
       {showAbout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-200">
-            <button onClick={() => setShowAbout(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">
-              <X size={20} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl animate-in zoom-in-95 duration-200">
+            <button onClick={() => setShowAbout(false)} className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 bg-slate-100 p-1.5 rounded-full transition-colors">
+              <X size={18} />
             </button>
-            <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white mb-4">
-              <EagleMark size={24} />
+            
+            <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-600/20">
+              <Globe size={28} />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">About EagleCourier</h2>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              EagleCourier is the internal global logistics network powering shipments for our worldwide staff. We ensure secure, fast, and reliable international delivery for critical company assets.
+            
+            <h2 className="text-2xl font-extrabold text-slate-900 leading-tight mb-3 min-h-[64px]">
+              {typedTitle}<span className="animate-pulse text-blue-600">|</span>
+            </h2>
+            
+            <p className="text-slate-500 text-sm leading-relaxed mb-6">
+              EagleCourier is the trusted internal logistics network powering global operations. We ensure secure, rapid, and transparent international delivery for critical corporate assets. 
             </p>
-            <p className="text-xs text-slate-500 mt-6">
-              © {new Date().getFullYear()} EagleCourier International. Internal use only.
-            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <ShieldCheck size={18} className="text-emerald-500" /> 100% Secure Handling
+              </div>
+              <div className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <Clock size={18} className="text-blue-500" /> On-Time Global Delivery
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Trusted by enterprise teams worldwide.</p>
+            </div>
           </div>
         </div>
       )}

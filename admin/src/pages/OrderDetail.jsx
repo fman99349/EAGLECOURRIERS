@@ -19,6 +19,7 @@ export default function OrderDetail() {
   const [error, setError] = useState('');
 
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [location, setLocation] = useState(''); // 🆕 Location state
   const [note, setNote] = useState('');
   const [customerVisible, setCustomerVisible] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -30,6 +31,10 @@ export default function OrderDetail() {
     try {
       const res = await api.get(`/orders/${id}`);
       setData(res.data);
+      // Pre-fill the location input with the current one
+      if (res.data.order.current_location) {
+        setLocation(res.data.order.current_location);
+      }
       setError('');
     } catch (err) {
       setError(err?.response?.data?.error || 'Failed to load item details');
@@ -45,10 +50,20 @@ export default function OrderDetail() {
     setUpdateError('');
     setUpdateSuccess('');
     if (!selectedStatus) { setUpdateError('Select a status'); return; }
+    if (!location.trim()) { setUpdateError('Current location is required'); return; }
+    
     setUpdating(true);
     try {
-      await api.post(`/orders/${id}/status`, { to_status_slug: selectedStatus, note: note || undefined, is_customer_visible: customerVisible });
-      setSelectedStatus(''); setNote(''); setCustomerVisible(true); setUpdateSuccess('Status updated successfully');
+      await api.post(`/orders/${id}/status`, { 
+        to_status_slug: selectedStatus, 
+        note: note || undefined, 
+        is_customer_visible: customerVisible,
+        current_location: location // 🆕 Send location
+      });
+      setSelectedStatus(''); 
+      setNote(''); 
+      setCustomerVisible(true); 
+      setUpdateSuccess('Status updated successfully');
       await load();
     } catch (err) {
       setUpdateError(err?.response?.data?.error || 'Failed to update status');
@@ -63,7 +78,6 @@ export default function OrderDetail() {
   // Calculate Progress Bar State
   const currentStepIndex = STEPS.findIndex((s) => s.slug === order.status_slug);
   const isOnHold = order.status_category === 'hold_financial' || order.status_category === 'hold_operational';
-  // If it's on hold, we show it as stuck at "Processing" visually
   const activeStep = currentStepIndex === -1 ? (isOnHold ? 1 : 0) : currentStepIndex;
 
   return (
@@ -84,9 +98,7 @@ export default function OrderDetail() {
       {/* 🟢 PROGRESS TRACKER */}
       <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between relative max-w-2xl mx-auto">
-          {/* Background Line */}
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-800 -z-10" />
-          {/* Active Line */}
           <div 
             className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-500 transition-all duration-500 -z-10" 
             style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }} 
@@ -133,6 +145,15 @@ export default function OrderDetail() {
               <div className="sm:col-span-2"><dt className="text-xs text-slate-500 mb-0.5">Description</dt><dd className="text-slate-200">{order.item_description || '—'}</dd></div>
               <div><dt className="text-xs text-slate-500 mb-0.5">From</dt><dd className="text-slate-200">{order.from_location}</dd></div>
               <div><dt className="text-xs text-slate-500 mb-0.5">To</dt><dd className="text-slate-200">{order.to_location}</dd></div>
+              
+              {/* 🆕 Current Location Display */}
+              <div className="sm:col-span-2">
+                <dt className="text-xs text-slate-500 mb-0.5">Current Location</dt>
+                <dd className="text-slate-200 font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded inline-block">
+                  {order.current_location || 'In Transit'}
+                </dd>
+              </div>
+
               <div><dt className="text-xs text-slate-500 mb-0.5">Insurance</dt><dd className="text-slate-200">{order.insurance_required ? 'Required' : 'Not required'}</dd></div>
               <div><dt className="text-xs text-slate-500 mb-0.5">Created</dt><dd className="text-slate-200">{new Date(order.created_at).toLocaleString()}</dd></div>
             </dl>
@@ -179,13 +200,28 @@ export default function OrderDetail() {
               <form onSubmit={handleStatusUpdate} className="space-y-3">
                 {updateError && <div className="bg-red-950/40 border border-red-900/60 text-red-300 text-xs rounded-md px-3 py-2">{updateError}</div>}
                 {updateSuccess && <div className="bg-emerald-950/40 border border-emerald-900/60 text-emerald-300 text-xs rounded-md px-3 py-2">{updateSuccess}</div>}
+                
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5">New status *</label>
-                  <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                  <select required value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
                     <option value="">— Select —</option>
                     {validNextStatuses.map((s) => <option key={s.id} value={s.slug}>{s.customer_label}</option>)}
                   </select>
                 </div>
+
+                {/* 🆕 Current Location Input */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Current Location *</label>
+                  <input
+                    required
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. London Hub"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5">Note (optional)</label>
                   <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500" placeholder="Message or context…" />
@@ -194,7 +230,8 @@ export default function OrderDetail() {
                   <input id="visible" type="checkbox" checked={customerVisible} onChange={(e) => setCustomerVisible(e.target.checked)} className="w-4 h-4 accent-blue-500" />
                   <label htmlFor="visible" className="text-xs text-slate-400">Visible to customer</label>
                 </div>
-                <button type="submit" disabled={updating} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-md transition-colors">
+                
+                <button type="submit" disabled={updating || !selectedStatus || !location.trim()} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-md transition-colors">
                   {updating ? 'Updating…' : 'Update Status'}
                 </button>
               </form>
