@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { generateOrderNumber } = require('../utils/orderNumber');
+const { sendStatusEmail } = require('../utils/emailService');
 
 // ────────────────────────────────────────────────────────
 // POST /api/orders
@@ -60,17 +61,17 @@ async function createOrder(req, res, next) {
       }
     }
 
-    const orderRes = await client.query(
+        const orderRes = await client.query(
       `INSERT INTO orders (
          order_number, item_name, item_description, from_location, to_location,
          recipient_id, declared_value, currency, insurance_required,
-         current_status_id, internal_notes, created_by_admin_id
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         current_status_id, internal_notes, created_by_admin_id, current_location
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         orderNumber, item_name, item_description || null, from_location, to_location,
         recipientId, declared_value || 0, (currency || 'USD').toUpperCase(),
-        Boolean(insurance_required), placedStatusId, internal_notes || null, req.admin.id,
+        Boolean(insurance_required), placedStatusId, internal_notes || null, req.admin.id, from_location
       ]
     );
     const order = orderRes.rows[0];
@@ -90,6 +91,25 @@ async function createOrder(req, res, next) {
   } finally {
     client.release();
   }
+
+
+
+    // Send initial email
+    const emailData = await client.query(
+      `SELECT o.order_number, o.item_name, o.from_location, o.to_location, o.current_location,
+              s.customer_label AS status_label, r.first_name, r.email
+       FROM orders o 
+       JOIN statuses s ON s.id = o.current_status_id 
+       JOIN recipients r ON r.id = o.recipient_id
+       WHERE o.id = $1`, [order.id]
+    );
+    sendStatusEmail(emailData.rows[0]).catch(console.error);
+
+    res.status(201).json({ order });
+
+
+
+
 }
 
 // ────────────────────────────────────────────────────────
@@ -271,9 +291,9 @@ async function updateOrderStatus(req, res, next) {
     }
 
     // Update order + insert event
-    await client.query(
-      'UPDATE orders SET current_status_id = $1 WHERE id = $2',
-      [targetStatus.id, order.id]
+        await client.query(
+      'UPDATE orders SET current_status_id = $1, current_location = COALESCE($2, current_location) WHERE id = $3',
+      [targetStatus.id, req.body.current_location || null, order.id]
     );
     const eventRes = await client.query(
       `INSERT INTO order_events (order_id, from_status_id, to_status_id, note, is_customer_visible, created_by_admin_id)
@@ -285,6 +305,29 @@ async function updateOrderStatus(req, res, next) {
     );
 
     await client.query('COMMIT');
+
+
+
+
+    // Send email update
+    const emailData = await client.query(
+      `SELECT o.order_number, o.item_name, o.from_location, o.to_location, o.current_location,
+              s.customer_label AS status_label, r.first_name, r.email
+       FROM orders o 
+       JOIN statuses s ON s.id = o.current_status_id 
+       JOIN recipients r ON r.id = o.recipient_id
+       WHERE o.id = $1`, [order.id]
+    );
+    sendStatusEmail(emailData.rows[0]).catch(console.error);
+
+
+
+
+
+
+
+
+
 
     res.json({
       ok: true,
@@ -298,6 +341,15 @@ async function updateOrderStatus(req, res, next) {
   } finally {
     client.release();
   }
+
+
+
+
+
+
+
+
+
 }
 
 

@@ -14,7 +14,7 @@ async function trackOrder(req, res, next) {
        FROM orders o
        JOIN statuses s ON s.id = o.current_status_id
        JOIN recipients r ON r.id = o.recipient_id
-       WHERE UPPER(o.order_number) = UPPER($1)`,
+       WHERE REPLACE(UPPER(o.order_number), '-', '') = REPLACE(UPPER($1), '-', '')`,
       [order_number]
     );
 

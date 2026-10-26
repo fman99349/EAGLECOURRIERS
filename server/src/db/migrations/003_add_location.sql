@@ -1,0 +1,1 @@
+ALTER TABLE orders ADD COLUMN current_location VARCHAR(255);
