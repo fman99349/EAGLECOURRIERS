@@ -159,7 +159,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 🆕 Current Location Tiny Text */}
+              {/* Current Location Tiny Text */}
               <div className="mb-8 flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                 <Globe size={14} className="text-blue-500" />
                 <span className="font-medium text-slate-700">Current Location:</span> 
@@ -199,14 +199,16 @@ export default function App() {
             </div>
 
             {/* Details Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-              <div className="pt-2 flex items-start gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+              
+              {/* Route */}
+              <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center gap-1 mt-1">
                   <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-400 bg-white" />
-                  <div className="w-0.5 h-6 bg-slate-200" />
+                  <div className="w-0.5 h-8 bg-slate-200" />
                   <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                 </div>
-                <div className="flex flex-col justify-between h-12 w-full text-sm">
+                <div className="flex flex-col justify-between h-14 w-full text-sm">
                   <div className="flex justify-between text-slate-500">
                     <span>Origin</span>
                     <span className="text-slate-900 font-medium">{data.order.from_location}</span>
@@ -217,27 +219,70 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Declared Value */}
+              <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                <span>Declared Value</span>
+                <span className="font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
+                  {data.order.currency} {Number(data.order.declared_value).toFixed(2)}
+                </span>
+              </div>
+
             </div>
 
-            {/* Timeline */}
+            {/* Timeline (History) */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">History</h3>
               <ol className="space-y-6">
-                {data.events.map((ev, idx) => (
-                  <li key={idx} className="relative flex gap-4">
-                    {idx !== data.events.length - 1 && (
-                      <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
-                    )}
-                    <div className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-blue-50 border border-blue-200">
-                      <Check size={10} className="text-blue-600" strokeWidth={3} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">{ev.label}</div>
-                      {ev.note && <p className="text-sm text-slate-500 mt-1">{ev.note}</p>}
-                      <div className="text-xs text-slate-400 font-medium mt-1">{new Date(ev.created_at).toLocaleString()}</div>
-                    </div>
-                  </li>
-                ))}
+                {data.events.map((ev, idx) => {
+                  const isLatest = idx === data.events.length - 1;
+                  
+                  return (
+                    <li key={idx} className="relative flex gap-4">
+                      {/* Timeline Line */}
+                      {!isLatest && (
+                        <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
+                      )}
+                      
+                      {/* Timeline Icon */}
+                      <div className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
+                        isLatest 
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-500/50' 
+                          : 'bg-blue-50 border-blue-200 text-blue-600'
+                      }`}>
+                        {isLatest ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        ) : (
+                          <Check size={10} strokeWidth={3} />
+                        )}
+                      </div>
+
+                      {/* Timeline Content */}
+                      <div className="flex-1">
+                        <div className={`flex items-baseline flex-wrap gap-x-1.5 ${
+                          isLatest ? 'text-base font-extrabold text-slate-900' : 'text-sm font-medium text-slate-700'
+                        }`}>
+                          <span>{ev.label}</span>
+                          {ev.location && (
+                            <span className={`font-normal ${isLatest ? 'text-slate-500 text-sm' : 'text-slate-400 text-xs'}`}>
+                              - {ev.location}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {ev.note && (
+                          <p className={`mt-1 ${isLatest ? 'text-sm text-slate-600' : 'text-sm text-slate-500'}`}>
+                            {ev.note}
+                          </p>
+                        )}
+                        
+                        <div className="text-xs text-slate-400 font-medium mt-1.5">
+                          {new Date(ev.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
 

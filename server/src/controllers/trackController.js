@@ -26,9 +26,9 @@ async function trackOrder(req, res, next) {
     const order = orderRes.rows[0];
 
     // 2. Get the timeline (ONLY events visible to the customer)
-    const eventsRes = await pool.query(
+       const eventsRes = await pool.query(
       `SELECT 
-         e.created_at, e.note,
+         e.created_at, e.note, e.location,
          ts.customer_label AS label, ts.color, ts.slug
        FROM order_events e
        JOIN statuses ts ON ts.id = e.to_status_id

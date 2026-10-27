@@ -77,10 +77,11 @@ async function createOrder(req, res, next) {
     const order = orderRes.rows[0];
 
     // Initial event (from NULL → placed)
+       // Initial event (from NULL → placed)
     await client.query(
-      `INSERT INTO order_events (order_id, from_status_id, to_status_id, note, is_customer_visible, created_by_admin_id)
-       VALUES ($1, NULL, $2, $3, TRUE, $4)`,
-      [order.id, placedStatusId, 'Order created', req.admin.id]
+      `INSERT INTO order_events (order_id, from_status_id, to_status_id, note, is_customer_visible, created_by_admin_id, location)
+       VALUES ($1, NULL, $2, $3, TRUE, $4, $5)`,
+      [order.id, placedStatusId, 'Order created', req.admin.id, from_location]
     );
 
     await client.query('COMMIT');
@@ -295,12 +296,13 @@ async function updateOrderStatus(req, res, next) {
       'UPDATE orders SET current_status_id = $1, current_location = COALESCE($2, current_location) WHERE id = $3',
       [targetStatus.id, req.body.current_location || null, order.id]
     );
-    const eventRes = await client.query(
-      `INSERT INTO order_events (order_id, from_status_id, to_status_id, note, is_customer_visible, created_by_admin_id)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at`,
+        const eventRes = await client.query(
+      `INSERT INTO order_events (order_id, from_status_id, to_status_id, note, is_customer_visible, created_by_admin_id, location)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, created_at`,
       [
         order.id, order.current_status_id, targetStatus.id,
         note || null, is_customer_visible !== false, req.admin.id,
+        req.body.current_location || null // Save the location to the event!
       ]
     );
 

@@ -1,0 +1,1 @@
+ALTER TABLE order_events ADD COLUMN location VARCHAR(255);
