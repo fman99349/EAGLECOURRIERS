@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Check ,Download} from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Download } from 'lucide-react';
 import api from '../api/client';
 import AdminLayout from '../components/AdminLayout';
 import StatusBadge from '../components/StatusBadge';
@@ -19,7 +19,7 @@ export default function OrderDetail() {
   const [error, setError] = useState('');
 
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [location, setLocation] = useState(''); // 🆕 Location state
+  const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
   const [customerVisible, setCustomerVisible] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -31,7 +31,6 @@ export default function OrderDetail() {
     try {
       const res = await api.get(`/orders/${id}`);
       setData(res.data);
-      // Pre-fill the location input with the current one
       if (res.data.order.current_location) {
         setLocation(res.data.order.current_location);
       }
@@ -58,7 +57,7 @@ export default function OrderDetail() {
         to_status_slug: selectedStatus, 
         note: note || undefined, 
         is_customer_visible: customerVisible,
-        current_location: location // 🆕 Send location
+        current_location: location
       });
       setSelectedStatus(''); 
       setNote(''); 
@@ -75,7 +74,6 @@ export default function OrderDetail() {
 
   const { order, events, validNextStatuses } = data;
 
-  // Calculate Progress Bar State
   const currentStepIndex = STEPS.findIndex((s) => s.slug === order.status_slug);
   const isOnHold = order.status_category === 'hold_financial' || order.status_category === 'hold_operational';
   const activeStep = currentStepIndex === -1 ? (isOnHold ? 1 : 0) : currentStepIndex;
@@ -91,7 +89,18 @@ export default function OrderDetail() {
             <h2 className="text-xl font-semibold text-slate-100 font-mono">{order.order_number}</h2>
             <p className="text-sm text-slate-500 mt-0.5">{order.item_name}</p>
           </div>
-          <StatusBadge label={order.status_label} color={order.status_color} />
+          <div className="flex items-center gap-3">
+            {/* 🆕 DOWNLOAD RECEIPT BUTTON (Moved here to the top) */}
+            <a 
+              href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/${order.id}/receipt`} 
+              target="_blank" 
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-3 py-1.5 rounded-md transition-colors border border-slate-700"
+            >
+              <Download size={14} /> Receipt
+            </a>
+            <StatusBadge label={order.status_label} color={order.status_color} />
+          </div>
         </div>
       </div>
 
@@ -146,7 +155,6 @@ export default function OrderDetail() {
               <div><dt className="text-xs text-slate-500 mb-0.5">From</dt><dd className="text-slate-200">{order.from_location}</dd></div>
               <div><dt className="text-xs text-slate-500 mb-0.5">To</dt><dd className="text-slate-200">{order.to_location}</dd></div>
               
-              {/* 🆕 Current Location Display */}
               <div className="sm:col-span-2">
                 <dt className="text-xs text-slate-500 mb-0.5">Current Location</dt>
                 <dd className="text-slate-200 font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded inline-block">
@@ -191,43 +199,6 @@ export default function OrderDetail() {
           </section>
         </div>
 
-
-
-      <div className="flex items-start justify-between mt-3 gap-4 flex-wrap">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-100 font-mono">{order.order_number}</h2>
-          <p className="text-sm text-slate-500 mt-0.5">{order.item_name}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* 🆕 DOWNLOAD RECEIPT BUTTON */}
-          <a 
-            href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/${order.id}/receipt`} 
-            target="_blank" 
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-3 py-1.5 rounded-md transition-colors border border-slate-700"
-          >
-            <Download size={14} /> Receipt
-          </a>
-          <StatusBadge label={order.status_label} color={order.status_color} />
-        </div>
-      </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         <div>
           <section className="bg-slate-900/50 border border-slate-800 rounded-lg p-5 sticky top-20">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Update Status</h3>
@@ -246,9 +217,6 @@ export default function OrderDetail() {
                   </select>
                 </div>
 
-
-
-                {/* 🆕 Current Location Input */}
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5">Current Location *</label>
                   <input

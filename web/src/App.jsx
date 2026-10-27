@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Package, Check, Loader2, Info, X, ShieldCheck, Globe, Clock,Download } from 'lucide-react';
+import { Search, Package, Check, Loader2, Info, X, ShieldCheck, Globe, Clock, Download } from 'lucide-react';
 
 const STEPS = [
   { label: 'Placed', threshold: 10 },
@@ -52,13 +52,9 @@ export default function App() {
     setData(null);
 
     try {
-      // 🆕 Strip hyphens and spaces for a smarter search
       const cleanNumber = numToTrack.replace(/[-\s]/g, '').trim();
-      
-      // Fallback to localhost if env variable is missing
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
       
-      // Note: We pass cleanNumber to the backend
       const res = await fetch(`${apiUrl}/api/track/${cleanNumber}`);
       const json = await res.json();
       
@@ -79,13 +75,11 @@ export default function App() {
     const currentOrder = data.order.status_sort_order || 0;
     const category = data.order.status_category;
 
-    // Calculate the progress step based on the sort_order
     if (currentOrder >= 80) activeStep = 3;
     else if (currentOrder >= 70) activeStep = 2;
     else if (currentOrder >= 20) activeStep = 1;
     else activeStep = 0;
 
-    // If it's a financial or operational hold, visually pause it at the current step
     if (category === 'hold_financial' || category === 'hold_operational') {
       isOnHold = true;
     }
@@ -94,7 +88,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
       
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -111,7 +104,6 @@ export default function App() {
 
       <main className="w-full max-w-md mx-auto px-4 py-12 flex flex-col">
         
-        {/* Search Box */}
         <div className={`transition-all duration-500 ${data || loading ? 'mb-6' : 'mt-10 mb-12'}`}>
           {!data && !loading && (
             <div className="text-center mb-8">
@@ -143,11 +135,9 @@ export default function App() {
           {error && <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm text-center font-medium">{error}</div>}
         </div>
 
-        {/* Results */}
         {data && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 space-y-6 pb-12">
             
-            {/* Progress Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-8">
                 <div>
@@ -159,14 +149,12 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Current Location Tiny Text */}
               <div className="mb-8 flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                 <Globe size={14} className="text-blue-500" />
                 <span className="font-medium text-slate-700">Current Location:</span> 
                 {data.order.current_location || 'In Transit'}
               </div>
 
-              {/* Stepper with Ticks and Pulsing Dot */}
               <div className="flex items-center justify-between relative mt-4">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 -z-10 rounded-full" />
                 <div 
@@ -198,10 +186,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Details Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-              
-              {/* Route */}
               <div className="flex items-start gap-4">
                 <div className="flex flex-col items-center gap-1 mt-1">
                   <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-400 bg-white" />
@@ -220,17 +205,14 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Declared Value */}
               <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
                 <span>Declared Value</span>
                 <span className="font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
                   {data.order.currency} {Number(data.order.declared_value).toFixed(2)}
                 </span>
               </div>
-
             </div>
 
-            {/* Timeline (History) */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">History</h3>
               <ol className="space-y-6">
@@ -239,12 +221,10 @@ export default function App() {
                   
                   return (
                     <li key={idx} className="relative flex gap-4">
-                      {/* Timeline Line */}
                       {!isLatest && (
                         <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
                       )}
                       
-                      {/* Timeline Icon */}
                       <div className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
                         isLatest 
                           ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-500/50' 
@@ -257,7 +237,6 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Timeline Content */}
                       <div className="flex-1">
                         <div className={`flex items-baseline flex-wrap gap-x-1.5 ${
                           isLatest ? 'text-base font-extrabold text-slate-900' : 'text-sm font-medium text-slate-700'
@@ -286,8 +265,6 @@ export default function App() {
               </ol>
             </div>
 
-
-            {/* 🆕 Download Receipt for Customer */}
             <div className="pt-2">
               <a
                 href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/track/${data.order.order_number}/receipt`}
@@ -299,14 +276,6 @@ export default function App() {
               </a>
             </div>
 
-            
-
-
-
-
-
-
-
             <button onClick={() => { setData(null); setTrackingNumber(''); }} className="w-full py-4 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
               Track another shipment
             </button>
@@ -314,7 +283,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Professional About Us Modal */}
       {showAbout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl animate-in zoom-in-95 duration-200">
