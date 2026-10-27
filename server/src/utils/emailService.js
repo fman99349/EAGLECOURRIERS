@@ -1,12 +1,14 @@
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 
-// Configure Gmail Transporter
+// Configure Gmail Transporter (Using explicit secure SMTP settings)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // ⚠️ Make sure there are NO SPACES in your app password
   },
 });
 
@@ -87,5 +89,14 @@ async function sendStatusEmail(order) {
     console.error('❌ Email failed to send:', error.message);
   }
 }
+
+// 🛠️ Test the SMTP connection immediately on startup (helpful for debugging)
+transporter.verify((error) => {
+  if (error) {
+    console.error('❌ SMTP Connection Error:', error.message);
+  } else {
+    console.log('✅ SMTP Server is ready to send emails');
+  }
+});
 
 module.exports = { sendStatusEmail };
