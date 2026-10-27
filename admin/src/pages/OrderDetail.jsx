@@ -236,7 +236,7 @@ export default function OrderDetail() {
                   />
                 </div>
 
-                {/* 🆕 Payment Fields */}
+                {/* 🆕 Payment Fields (This block was missing) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5">Payment Type</label>
