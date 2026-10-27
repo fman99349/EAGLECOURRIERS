@@ -22,6 +22,11 @@ export default function OrderDetail() {
   const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
   const [customerVisible, setCustomerVisible] = useState(true);
+  
+  // 🆕 Payment State
+  const [paymentType, setPaymentType] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
+
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
   const [updateSuccess, setUpdateSuccess] = useState('');
@@ -57,11 +62,15 @@ export default function OrderDetail() {
         to_status_slug: selectedStatus, 
         note: note || undefined, 
         is_customer_visible: customerVisible,
-        current_location: location
+        current_location: location,
+        payment_type: paymentType || undefined,
+        payment_amount: paymentAmount ? Number(paymentAmount) : undefined
       });
       setSelectedStatus(''); 
       setNote(''); 
       setCustomerVisible(true); 
+      setPaymentType(''); // Reset
+      setPaymentAmount(''); // Reset
       setUpdateSuccess('Status updated successfully');
       await load();
     } catch (err) {
@@ -90,7 +99,6 @@ export default function OrderDetail() {
             <p className="text-sm text-slate-500 mt-0.5">{order.item_name}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* 🆕 DOWNLOAD RECEIPT BUTTON (Moved here to the top) */}
             <a 
               href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/${order.id}/receipt`} 
               target="_blank" 
@@ -104,7 +112,6 @@ export default function OrderDetail() {
         </div>
       </div>
 
-      {/* 🟢 PROGRESS TRACKER */}
       <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between relative max-w-2xl mx-auto">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-800 -z-10" />
@@ -227,6 +234,32 @@ export default function OrderDetail() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
                     placeholder="e.g. London Hub"
                   />
+                </div>
+
+                {/* 🆕 Payment Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Payment Type</label>
+                    <input
+                      type="text"
+                      value={paymentType}
+                      onChange={(e) => setPaymentType(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                      placeholder="e.g. Tax"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Amount</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
 
                 <div>

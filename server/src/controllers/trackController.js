@@ -1,14 +1,14 @@
 const pool = require('../db');
 const { generateReceiptPDF } = require('../utils/pdfService');
+
 async function trackOrder(req, res, next) {
   try {
     const { order_number } = req.params;
 
-    // 1. Find the order (case-insensitive, ignoring hyphens)
-       const orderRes = await pool.query(
+    const orderRes = await pool.query(
       `SELECT 
          o.id, o.order_number, o.item_name, o.item_description, o.from_location, o.to_location, 
-         o.declared_value, o.currency, o.created_at, o.current_location,
+         o.declared_value, o.currency, o.created_at, o.current_location, o.total_amount_paid,
          s.slug AS status_slug, s.customer_label AS status_label, s.color AS status_color, 
          s.sort_order AS status_sort_order, s.category AS status_category,
          r.first_name, r.last_name
@@ -25,8 +25,7 @@ async function trackOrder(req, res, next) {
 
     const order = orderRes.rows[0];
 
-    // 2. Get the timeline (ONLY events visible to the customer)
-       const eventsRes = await pool.query(
+    const eventsRes = await pool.query(
       `SELECT 
          e.created_at, e.note, e.location,
          ts.customer_label AS label, ts.color, ts.slug
@@ -51,7 +50,7 @@ async function trackOrder(req, res, next) {
 async function downloadPublicReceipt(req, res, next) {
   try {
     const { order_number } = req.params;
-    const result = await pool.query(
+    const orderResult = await pool.query(
       `SELECT o.*, s.customer_label AS status_label, r.first_name, r.last_name 
        FROM orders o 
        JOIN statuses s ON s.id = o.current_status_id 
@@ -60,20 +59,20 @@ async function downloadPublicReceipt(req, res, next) {
       [order_number]
     );
     
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
+    if (orderResult.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
     
-    const pdfBuffer = await generateReceiptPDF(result.rows[0]);
+    // 🆕 Fetch full event ledger for the receipt
+    const eventsResult = await pool.query(
+      `SELECT * FROM order_events WHERE order_id = $1 ORDER BY created_at ASC`, [orderResult.rows[0].id]
+    );
+    
+    const pdfBuffer = await generateReceiptPDF(orderResult.rows[0], eventsResult.rows);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Receipt_${result.rows[0].order_number}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=Receipt_${orderResult.rows[0].order_number}.pdf`);
     res.send(pdfBuffer);
   } catch (err) {
     next(err);
   }
 }
-
-
-
-
-
 
 module.exports = { trackOrder, downloadPublicReceipt };
