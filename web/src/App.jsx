@@ -29,6 +29,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAbout, setShowAbout] = useState(false);
+  const [showLogo, setShowLogo] = useState(false); // 🆕 State for Logo Lightbox
   
   const typedTitle = useTypewriter('EagleCourier International Shipping Services');
 
@@ -93,14 +94,20 @@ export default function App() {
       
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-  <img 
-    src="/EAGLE.jpg" 
-    alt="EagleCourier Logo" 
-    className="w-8 h-8 rounded-lg object-cover shadow-sm" 
-  />
-  <span className="font-bold text-lg tracking-tight">EagleCourier</span>
-</div>
+          
+          {/* 🆕 Clickable Logo */}
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => setShowLogo(true)}
+          >
+            <img 
+              src="/EAGLE.jpg" 
+              alt="EagleCourier Logo" 
+              className="w-8 h-8 rounded-lg object-cover shadow-sm" 
+            />
+            <span className="font-bold text-lg tracking-tight">EagleCourier</span>
+          </div>
+
           <button onClick={() => setShowAbout(true)} className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5">
             <Info size={16} /> About
           </button>
@@ -150,7 +157,7 @@ export default function App() {
                   <h2 className="text-xl font-bold text-slate-900">{data.order.item_name}</h2>
                 </div>
                 
-                {/* 🆕 Dynamic Status Badge Color */}
+                {/* Dynamic Status Badge Color */}
                 <div 
                   className="px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap border"
                   style={{ 
@@ -172,7 +179,7 @@ export default function App() {
               <div className="flex items-center justify-between relative mt-4">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 -z-10 rounded-full" />
                 
-                {/* 🆕 Dynamic Progress Line Color */}
+                {/* Dynamic Progress Line Color */}
                 <div 
                   className="absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-700 -z-10 rounded-full" 
                   style={{ 
@@ -186,7 +193,7 @@ export default function App() {
                   const isActive = idx === activeStep;
                   return (
                     <div key={step.label} className="flex flex-col items-center gap-2 bg-white px-2">
-                      {/* 🆕 Dynamic Step Circle Color */}
+                      {/* Dynamic Step Circle Color */}
                       <div 
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                           !isCompleted && !isActive ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'border-2'
@@ -258,7 +265,7 @@ export default function App() {
                         <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
                       )}
                       
-                      {/* 🆕 Dynamic Timeline Dot Color */}
+                      {/* Dynamic Timeline Dot Color */}
                       <div 
                         className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border"
                         style={{
@@ -321,6 +328,7 @@ export default function App() {
         )}
       </main>
 
+      {/* About Us Modal */}
       {showAbout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl animate-in zoom-in-95 duration-200">
@@ -353,6 +361,24 @@ export default function App() {
               <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Trusted by enterprise teams worldwide.</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 🆕 Logo Lightbox Modal */}
+      {showLogo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+          <button 
+            onClick={() => setShowLogo(false)} 
+            className="absolute top-6 right-6 text-white bg-white/10 hover:bg-white/20 p-2 rounded-full backdrop-blur-sm transition-colors z-[110]"
+          >
+            <X size={24} />
+          </button>
+          
+          <img 
+            src="/EAGLE.jpg" 
+            alt="EagleCourier Logo Full" 
+            className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
+          />
         </div>
       )}
     </div>
