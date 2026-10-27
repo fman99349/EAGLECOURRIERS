@@ -76,4 +76,4 @@ async function downloadPublicReceipt(req, res, next) {
 
 
 
-module.exports = { trackOrder,downloadPublicReceipt };
+module.exports = { trackOrder, downloadPublicReceipt };
