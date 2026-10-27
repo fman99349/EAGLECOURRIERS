@@ -299,9 +299,7 @@ export default function App() {
               </a>
             </div>
 
-            <button onClick={() => { setData(null); setTrackingNumber(''); }} className="w-full py-4 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
-              Track another shipment
-            </button>
+            
 
 
 
