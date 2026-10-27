@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Package, Check, Loader2, Info, X, ShieldCheck, Globe, Clock } from 'lucide-react';
+import { Search, Package, Check, Loader2, Info, X, ShieldCheck, Globe, Clock,Download } from 'lucide-react';
 
 const STEPS = [
   { label: 'Placed', threshold: 10 },
@@ -285,6 +285,29 @@ export default function App() {
                 })}
               </ol>
             </div>
+
+
+            {/* 🆕 Download Receipt for Customer */}
+            <div className="pt-2">
+              <a
+                href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/track/${data.order.order_number}/receipt`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-medium text-sm transition-colors shadow-sm"
+              >
+                <Download size={16} /> Download My Receipt
+              </a>
+            </div>
+
+            <button onClick={() => { setData(null); setTrackingNumber(''); }} className="w-full py-4 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+              Track another shipment
+            </button>
+
+
+
+
+
+
 
             <button onClick={() => { setData(null); setTrackingNumber(''); }} className="w-full py-4 text-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
               Track another shipment

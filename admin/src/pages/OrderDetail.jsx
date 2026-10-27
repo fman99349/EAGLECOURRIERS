@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Check ,Download} from 'lucide-react';
 import api from '../api/client';
 import AdminLayout from '../components/AdminLayout';
 import StatusBadge from '../components/StatusBadge';
@@ -191,6 +191,43 @@ export default function OrderDetail() {
           </section>
         </div>
 
+
+
+      <div className="flex items-start justify-between mt-3 gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-100 font-mono">{order.order_number}</h2>
+          <p className="text-sm text-slate-500 mt-0.5">{order.item_name}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* 🆕 DOWNLOAD RECEIPT BUTTON */}
+          <a 
+            href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/${order.id}/receipt`} 
+            target="_blank" 
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-3 py-1.5 rounded-md transition-colors border border-slate-700"
+          >
+            <Download size={14} /> Receipt
+          </a>
+          <StatusBadge label={order.status_label} color={order.status_color} />
+        </div>
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         <div>
           <section className="bg-slate-900/50 border border-slate-800 rounded-lg p-5 sticky top-20">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Update Status</h3>
@@ -208,6 +245,8 @@ export default function OrderDetail() {
                     {validNextStatuses.map((s) => <option key={s.id} value={s.slug}>{s.customer_label}</option>)}
                   </select>
                 </div>
+
+
 
                 {/* 🆕 Current Location Input */}
                 <div>
