@@ -1,284 +1,282 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Check, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, Package, Eye, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api/client';
 import AdminLayout from '../components/AdminLayout';
 import StatusBadge from '../components/StatusBadge';
 
-const STEPS = [
-  { slug: 'placed', label: 'Placed' },
-  { slug: 'processing', label: 'Processing' },
-  { slug: 'shipped', label: 'In Transit' },
-  { slug: 'delivered', label: 'Delivered' },
-];
+const LIMIT = 10;
 
-export default function OrderDetail() {
-  const { id } = useParams();
-  const [data, setData] = useState(null);
+export default function Orders() {
+  const [orders, setOrders] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
-  const [selectedStatus, setSelectedStatus] = useState('');
+  // Modal State
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [validStatuses, setValidStatuses] = useState([]);
+  const [newStatus, setNewStatus] = useState('');
   const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
-  const [customerVisible, setCustomerVisible] = useState(true);
   
   // 🆕 Payment State
   const [paymentType, setPaymentType] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
 
   const [updating, setUpdating] = useState(false);
-  const [updateError, setUpdateError] = useState('');
-  const [updateSuccess, setUpdateSuccess] = useState('');
 
-  async function load() {
+  async function load(term = '', currentPage = 0) {
     setLoading(true);
     try {
-      const res = await api.get(`/orders/${id}`);
-      setData(res.data);
-      if (res.data.order.current_location) {
-        setLocation(res.data.order.current_location);
-      }
+      const params = { limit: LIMIT, offset: currentPage * LIMIT };
+      if (term) params.search = term;
+      
+      const res = await api.get('/orders', { params });
+      setOrders(res.data.orders);
+      setTotal(res.data.total);
       setError('');
     } catch (err) {
-      setError(err?.response?.data?.error || 'Failed to load item details');
+      setError(err?.response?.data?.error || 'Failed to load items');
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { load(); }, [id]); // eslint-disable-line
+  useEffect(() => { load(search, page); }, [page]); // eslint-disable-line
 
-  async function handleStatusUpdate(e) {
+  function handleSearch(e) {
     e.preventDefault();
-    setUpdateError('');
-    setUpdateSuccess('');
-    if (!selectedStatus) { setUpdateError('Select a status'); return; }
-    if (!location.trim()) { setUpdateError('Current location is required'); return; }
+    setPage(0);
+    load(search, 0);
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm('Are you sure you want to delete this item? This cannot be undone.')) return;
+    try {
+      await api.delete(`/orders/${id}`);
+      load(search, page);
+    } catch (err) {
+      alert(err?.response?.data?.error || 'Failed to delete item');
+    }
+  }
+
+  async function openEditModal(order) {
+    setEditingOrder(order);
+    setNewStatus('');
+    setNote('');
+    setLocation(order.current_location || '');
+    setPaymentType('');
+    setPaymentAmount('');
+    
+    try {
+      // Fetch ALL statuses so the Admin can pick any
+      const res = await api.get('/statuses');
+      setValidStatuses(res.data.statuses);
+    } catch (err) {
+      alert('Failed to load status options');
+    }
+  }
+
+  async function handleUpdateStatus(e) {
+    e.preventDefault();
+    if (!newStatus) return;
+    if (!location.trim()) { alert('Location is required'); return; }
     
     setUpdating(true);
     try {
-      await api.post(`/orders/${id}/status`, { 
-        to_status_slug: selectedStatus, 
-        note: note || undefined, 
-        is_customer_visible: customerVisible,
+      await api.post(`/orders/${editingOrder.id}/status`, {
+        to_status_slug: newStatus,
+        note: note || undefined,
+        force_override: true, // 🆕 Bypass state machine
         current_location: location,
         payment_type: paymentType || undefined,
         payment_amount: paymentAmount ? Number(paymentAmount) : undefined
       });
-      setSelectedStatus(''); 
-      setNote(''); 
-      setCustomerVisible(true); 
-      setPaymentType(''); // Reset
-      setPaymentAmount(''); // Reset
-      setUpdateSuccess('Status updated successfully');
-      await load();
+      setEditingOrder(null);
+      load(search, page);
     } catch (err) {
-      setUpdateError(err?.response?.data?.error || 'Failed to update status');
-    } finally { setUpdating(false); }
+      alert(err?.response?.data?.error || 'Failed to update status');
+    } finally {
+      setUpdating(false);
+    }
   }
 
-  if (loading) return <AdminLayout><div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 text-slate-500 animate-spin" /></div></AdminLayout>;
-  if (error || !data) return <AdminLayout><div className="bg-red-950/40 border border-red-900 text-red-300 text-sm rounded-md px-4 py-3">{error || 'Item not found'}</div></AdminLayout>;
-
-  const { order, events, validNextStatuses } = data;
-
-  const currentStepIndex = STEPS.findIndex((s) => s.slug === order.status_slug);
-  const isOnHold = order.status_category === 'hold_financial' || order.status_category === 'hold_operational';
-  const activeStep = currentStepIndex === -1 ? (isOnHold ? 1 : 0) : currentStepIndex;
+  const totalPages = Math.ceil(total / LIMIT);
 
   return (
     <AdminLayout>
-      <div className="mb-5">
-        <Link to="/orders" className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition">
-          <ArrowLeft size={14} /> Back to items
-        </Link>
-        <div className="flex items-start justify-between mt-3 gap-4 flex-wrap">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-100 font-mono">{order.order_number}</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{order.item_name}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <a 
-              href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders/${order.id}/receipt`} 
-              target="_blank" 
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium px-3 py-1.5 rounded-md transition-colors border border-slate-700"
-            >
-              <Download size={14} /> Receipt
-            </a>
-            <StatusBadge label={order.status_label} color={order.status_color} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-5 mb-4">
-        <div className="flex items-center justify-between relative max-w-2xl mx-auto">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-800 -z-10" />
-          <div 
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-500 transition-all duration-500 -z-10" 
-            style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }} 
-          />
-
-          {STEPS.map((step, idx) => {
-            const isCompleted = idx < activeStep;
-            const isActive = idx === activeStep;
-            
-            return (
-              <div key={step.slug} className="flex flex-col items-center gap-2">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  isCompleted ? 'bg-blue-500 text-white' : 
-                  isActive ? 'bg-slate-900 border-2 border-blue-500 text-blue-400' : 
-                  'bg-slate-900 border-2 border-slate-700 text-slate-600'
-                }`}>
-                  {isCompleted ? <Check size={12} /> : idx + 1}
-                </div>
-                <span className={`text-[11px] font-medium uppercase tracking-wider ${
-                  isActive ? 'text-blue-400' : isCompleted ? 'text-slate-300' : 'text-slate-600'
-                }`}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        {isOnHold && (
-          <div className="mt-4 text-center">
-            <span className="inline-block bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs px-2.5 py-1 rounded-md">
-              ⚠️ Currently On Hold: {order.status_label}
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <section className="bg-slate-900/50 border border-slate-800 rounded-lg p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Details</h3>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div><dt className="text-xs text-slate-500 mb-0.5">Item Name</dt><dd className="text-slate-200">{order.item_name}</dd></div>
-              <div><dt className="text-xs text-slate-500 mb-0.5">Value</dt><dd className="text-slate-200 tabular-nums">{order.currency} {Number(order.declared_value).toFixed(2)}</dd></div>
-              <div className="sm:col-span-2"><dt className="text-xs text-slate-500 mb-0.5">Description</dt><dd className="text-slate-200">{order.item_description || '—'}</dd></div>
-              <div><dt className="text-xs text-slate-500 mb-0.5">From</dt><dd className="text-slate-200">{order.from_location}</dd></div>
-              <div><dt className="text-xs text-slate-500 mb-0.5">To</dt><dd className="text-slate-200">{order.to_location}</dd></div>
-              
-              <div className="sm:col-span-2">
-                <dt className="text-xs text-slate-500 mb-0.5">Current Location</dt>
-                <dd className="text-slate-200 font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded inline-block">
-                  {order.current_location || 'In Transit'}
-                </dd>
-              </div>
-
-              <div><dt className="text-xs text-slate-500 mb-0.5">Insurance</dt><dd className="text-slate-200">{order.insurance_required ? 'Required' : 'Not required'}</dd></div>
-              <div><dt className="text-xs text-slate-500 mb-0.5">Created</dt><dd className="text-slate-200">{new Date(order.created_at).toLocaleString()}</dd></div>
-            </dl>
-          </section>
-
-          <section className="bg-slate-900/50 border border-slate-800 rounded-lg p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Recipient</h3>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div><dt className="text-xs text-slate-500 mb-0.5">Name</dt><dd className="text-slate-200">{order.first_name} {order.last_name}</dd></div>
-              <div><dt className="text-xs text-slate-500 mb-0.5">Email</dt><dd className="text-slate-200">{order.email}</dd></div>
-              <div><dt className="text-xs text-slate-500 mb-0.5">Phone</dt><dd className="text-slate-200">{order.phone}</dd></div>
-            </dl>
-          </section>
-
-          <section className="bg-slate-900/50 border border-slate-800 rounded-lg p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Timeline</h3>
-            <ol className="space-y-3">
-              {events.map((ev) => (
-                <li key={ev.id} className="flex gap-3">
-                  <div className="flex flex-col items-center pt-1.5">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ev.to_color }} />
-                    <div className="w-px flex-1 bg-slate-800 my-1" />
-                  </div>
-                  <div className="flex-1 pb-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <StatusBadge label={ev.to_label} color={ev.to_color} />
-                      {!ev.is_customer_visible && <span className="text-[10px] text-slate-600 uppercase tracking-wider">internal</span>}
-                    </div>
-                    {ev.note && <p className="text-slate-300 text-sm mt-1">{ev.note}</p>}
-                    <p className="text-xs text-slate-500 mt-0.5">{new Date(ev.created_at).toLocaleString()} · by {ev.by_admin}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-        </div>
-
+      <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
         <div>
-          <section className="bg-slate-900/50 border border-slate-800 rounded-lg p-5 sticky top-20">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Update Status</h3>
-            {validNextStatuses.length === 0 ? (
-              <p className="text-slate-500 text-sm">No transitions available from the current status.</p>
-            ) : (
-              <form onSubmit={handleStatusUpdate} className="space-y-3">
-                {updateError && <div className="bg-red-950/40 border border-red-900/60 text-red-300 text-xs rounded-md px-3 py-2">{updateError}</div>}
-                {updateSuccess && <div className="bg-emerald-950/40 border border-emerald-900/60 text-emerald-300 text-xs rounded-md px-3 py-2">{updateSuccess}</div>}
-                
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">New status *</label>
-                  <select required value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-                    <option value="">— Select —</option>
-                    {validNextStatuses.map((s) => <option key={s.id} value={s.slug}>{s.customer_label}</option>)}
-                  </select>
-                </div>
+          <h2 className="text-xl font-semibold text-slate-100">Items</h2>
+          <p className="text-sm text-slate-500 mt-0.5">{total} item{total === 1 ? '' : 's'} found</p>
+        </div>
+        <Link to="/orders/new" className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-3 py-2 rounded-md transition-colors">
+          <span>New Item</span>
+        </Link>
+      </div>
 
+      <form onSubmit={handleSearch} className="mb-3 flex gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by tracking #, recipient, item name…"
+          className="flex-1 bg-slate-900/50 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40"
+        />
+        <button type="submit" className="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm rounded-md transition-colors">
+          Search
+        </button>
+      </form>
+
+      {error && <div className="bg-red-950/40 border border-red-900/60 text-red-300 text-sm rounded-md px-4 py-3 mb-3">{error}</div>}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-slate-500 animate-spin" /></div>
+      ) : orders.length === 0 ? (
+        <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-10 text-center">
+          <div className="inline-flex w-10 h-10 rounded-md bg-slate-800 items-center justify-center text-slate-500 mb-3"><Package size={18} /></div>
+          <div className="text-slate-300 text-sm font-medium">No items found</div>
+          <p className="text-slate-500 text-xs mt-1.5">{search ? `No results for "${search}".` : 'Create your first item to get started.'}</p>
+        </div>
+      ) : (
+        <div className="bg-slate-900/50 border border-slate-800 rounded-lg overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead className="bg-slate-900 border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
+              <tr>
+                <th className="text-left px-4 py-2.5 font-medium">Tracking #</th>
+                <th className="text-left px-4 py-2.5 font-medium">Item Name</th>
+                <th className="text-left px-4 py-2.5 font-medium hidden md:table-cell">Route</th>
+                <th className="text-left px-4 py-2.5 font-medium">Status</th>
+                <th className="text-right px-4 py-2.5 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {orders.map((o) => (
+                <tr key={o.id} className="hover:bg-slate-900/80 transition-colors group">
+                  <td className="px-4 py-3 font-mono text-xs text-blue-400">{o.order_number}</td>
+                  <td className="px-4 py-3 text-slate-200 truncate max-w-xs">{o.item_name}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs hidden md:table-cell whitespace-nowrap">
+                    {o.from_location} <span className="text-slate-600">→</span> {o.to_location}
+                  </td>
+                  <td className="px-4 py-3"><StatusBadge label={o.status_label} color={o.status_color} /></td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Link to={`/orders/${o.id}`} className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-md transition" title="View Details">
+                        <Eye size={16} />
+                      </Link>
+                      <button onClick={() => openEditModal(o)} className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition" title="Update Status">
+                        <Pencil size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(o.id)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-md transition" title="Delete Item">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-xs text-slate-500">Page {page + 1} of {totalPages}</span>
+          <div className="flex gap-2">
+            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-md disabled:opacity-50 hover:bg-slate-700 transition">
+              <ChevronLeft size={14} /> Prev
+            </button>
+            <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-md disabled:opacity-50 hover:bg-slate-700 transition">
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 Edit Status Modal (Pencil Icon) */}
+      {editingOrder && (
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-sm shadow-2xl my-8 sm:my-0 relative">
+            
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h3 className="text-base font-semibold text-slate-100">Update Status</h3>
+              <button onClick={() => setEditingOrder(null)} className="text-slate-500 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateStatus} className="p-4 sm:p-5 space-y-4">
+              
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-md">
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Item</div>
+                <div className="text-sm text-slate-200 font-medium truncate">{editingOrder.item_name}</div>
+                <div className="text-xs font-mono text-blue-400 mt-0.5">{editingOrder.order_number}</div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">New Status *</label>
+                <select required value={newStatus} onChange={e => setNewStatus(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                  <option value="">— Select —</option>
+                  {validStatuses.map(s => <option key={s.id} value={s.slug}>{s.customer_label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Current Location *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={location} 
+                  onChange={e => setLocation(e.target.value)} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500" 
+                  placeholder="e.g. London Hub" 
+                />
+              </div>
+
+              {/* 🆕 Payment Fields */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Current Location *</label>
-                  <input
-                    required
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
-                    placeholder="e.g. London Hub"
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Payment Type</label>
+                  <input 
+                    type="text" 
+                    value={paymentType} 
+                    onChange={e => setPaymentType(e.target.value)} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500" 
+                    placeholder="e.g. Tax" 
                   />
                 </div>
-
-                {/* 🆕 Payment Fields (This block was missing) */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Payment Type</label>
-                    <input
-                      type="text"
-                      value={paymentType}
-                      onChange={(e) => setPaymentType(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
-                      placeholder="e.g. Tax"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Amount</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Note (optional)</label>
-                  <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500" placeholder="Message or context…" />
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Amount</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={paymentAmount} 
+                    onChange={e => setPaymentAmount(e.target.value)} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500" 
+                    placeholder="0.00" 
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <input id="visible" type="checkbox" checked={customerVisible} onChange={(e) => setCustomerVisible(e.target.checked)} className="w-4 h-4 accent-blue-500" />
-                  <label htmlFor="visible" className="text-xs text-slate-400">Visible to customer</label>
-                </div>
-                
-                <button type="submit" disabled={updating || !selectedStatus || !location.trim()} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-md transition-colors">
-                  {updating ? 'Updating…' : 'Update Status'}
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Note (optional)</label>
+                <textarea rows={2} value={note} onChange={e => setNote(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none" placeholder="Add a note..." />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setEditingOrder(null)} className="px-4 py-2 text-sm text-slate-300 hover:text-white transition">Cancel</button>
+                <button type="submit" disabled={updating || !newStatus || !location.trim()} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition">
+                  {updating ? 'Saving...' : 'Update'}
                 </button>
-              </form>
-            )}
-          </section>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </AdminLayout>
   );
 }
