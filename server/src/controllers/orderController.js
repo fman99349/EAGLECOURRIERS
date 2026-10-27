@@ -1,6 +1,7 @@
 const pool = require('../db');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const { sendStatusEmail } = require('../utils/emailService');
+const { generateReceiptPDF } = require('../utils/pdfService');
 
 // ────────────────────────────────────────────────────────
 // POST /api/orders
@@ -349,4 +350,30 @@ async function deleteOrder(req, res, next) {
   }
 }
 
-module.exports = { createOrder, listOrders, getOrder, updateOrderStatus, deleteOrder };
+
+
+
+
+// GET /api/orders/:id/receipt
+async function downloadReceipt(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT o.*, s.customer_label AS status_label, r.first_name, r.last_name 
+       FROM orders o 
+       JOIN statuses s ON s.id = o.current_status_id 
+       JOIN recipients r ON r.id = o.recipient_id 
+       WHERE o.id = $1`, [id]
+    );
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
+    
+    const pdfBuffer = await generateReceiptPDF(result.rows[0]);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Receipt_${result.rows[0].order_number}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    next(err);
+  }
+}
+module.exports = { createOrder, listOrders, getOrder, updateOrderStatus, deleteOrder,downloadReceipt };

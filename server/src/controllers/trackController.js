@@ -1,5 +1,5 @@
 const pool = require('../db');
-
+const { generateReceiptPDF } = require('../utils/pdfService');
 async function trackOrder(req, res, next) {
   try {
     const { order_number } = req.params;
@@ -47,4 +47,33 @@ async function trackOrder(req, res, next) {
   }
 }
 
-module.exports = { trackOrder };
+// GET /api/track/:order_number/receipt
+async function downloadPublicReceipt(req, res, next) {
+  try {
+    const { order_number } = req.params;
+    const result = await pool.query(
+      `SELECT o.*, s.customer_label AS status_label, r.first_name, r.last_name 
+       FROM orders o 
+       JOIN statuses s ON s.id = o.current_status_id 
+       JOIN recipients r ON r.id = o.recipient_id 
+       WHERE REPLACE(UPPER(o.order_number), '-', '') = REPLACE(UPPER($1), '-', '')`, 
+      [order_number]
+    );
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
+    
+    const pdfBuffer = await generateReceiptPDF(result.rows[0]);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Receipt_${result.rows[0].order_number}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    next(err);
+  }
+}
+
+
+
+
+
+
+module.exports = { trackOrder,downloadPublicReceipt };

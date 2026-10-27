@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const ctrl = require('../controllers/orderController');
+router.get('/:id/receipt', ctrl.downloadReceipt);
 
 router.use(requireAuth);
 
