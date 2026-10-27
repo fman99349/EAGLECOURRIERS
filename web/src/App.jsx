@@ -118,13 +118,13 @@ export default function App() {
           {!data && !loading && (
             <div className="text-center mb-8">
               
-              {/* 🆕 Horizontally Focused Hero Logo */}
-              <div className="mb-5 flex justify-center">
+                            {/* 🆕 Horizontally Focused Hero Logo */}
+              <div className="mb-6 flex justify-center">
                 <img 
                   src="/EAGLE.jpg" 
                   alt="EagleCourier Logo" 
                   onClick={() => setShowLogo(true)}
-                  className="w-40 h-12 object-cover rounded-xl shadow-md border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" 
+                  className="w-64 h-24 object-cover rounded-2xl shadow-md border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" 
                 />
               </div>
 
