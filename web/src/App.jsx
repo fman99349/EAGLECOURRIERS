@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Search, Package, Check, Loader2, Info, X, ShieldCheck, Globe, Clock } from 'lucide-react';
 
 const STEPS = [
-  { slug: 'placed', label: 'Placed' },
-  { slug: 'processing', label: 'Processing' },
-  { slug: 'shipped', label: 'In Transit' },
-  { slug: 'delivered', label: 'Delivered' },
+  { label: 'Placed', threshold: 10 },
+  { label: 'Processing', threshold: 30 },
+  { label: 'In Transit', threshold: 70 },
+  { label: 'Delivered', threshold: 80 },
 ];
 
 // Typewriter Hook for About Us
@@ -72,9 +72,24 @@ export default function App() {
     }
   }
 
-  const currentStepIndex = data ? STEPS.findIndex((s) => s.slug === data.order.status_slug) : -1;
-  const isOnHold = data && (data.order.status_slug.includes('pending') || data.order.status_slug === 'parked');
-  const activeStep = currentStepIndex === -1 ? (isOnHold ? 1 : 0) : currentStepIndex;
+  let activeStep = 0;
+  let isOnHold = false;
+
+  if (data) {
+    const currentOrder = data.order.status_sort_order || 0;
+    const category = data.order.status_category;
+
+    // Calculate the progress step based on the sort_order
+    if (currentOrder >= 80) activeStep = 3;
+    else if (currentOrder >= 70) activeStep = 2;
+    else if (currentOrder >= 20) activeStep = 1;
+    else activeStep = 0;
+
+    // If it's a financial or operational hold, visually pause it at the current step
+    if (category === 'hold_financial' || category === 'hold_operational') {
+      isOnHold = true;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
@@ -162,7 +177,7 @@ export default function App() {
                   const isCompleted = idx < activeStep;
                   const isActive = idx === activeStep;
                   return (
-                    <div key={step.slug} className="flex flex-col items-center gap-2 bg-white px-2">
+                    <div key={step.label} className="flex flex-col items-center gap-2 bg-white px-2">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                         isCompleted ? 'bg-blue-600 text-white' : 
                         isActive ? (isOnHold ? 'bg-amber-100 text-amber-600 border-2 border-amber-500' : 'bg-blue-100 text-blue-600 border-2 border-blue-600') : 

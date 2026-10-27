@@ -5,11 +5,12 @@ async function trackOrder(req, res, next) {
     const { order_number } = req.params;
 
     // 1. Find the order (case-insensitive, ignoring hyphens)
-    const orderRes = await pool.query(
+       const orderRes = await pool.query(
       `SELECT 
          o.id, o.order_number, o.item_name, o.item_description, o.from_location, o.to_location, 
          o.declared_value, o.currency, o.created_at, o.current_location,
-         s.slug AS status_slug, s.customer_label AS status_label, s.color AS status_color,
+         s.slug AS status_slug, s.customer_label AS status_label, s.color AS status_color, 
+         s.sort_order AS status_sort_order, s.category AS status_category,
          r.first_name, r.last_name
        FROM orders o
        JOIN statuses s ON s.id = o.current_status_id
