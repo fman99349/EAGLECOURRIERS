@@ -29,7 +29,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAbout, setShowAbout] = useState(false);
-  const [showLogo, setShowLogo] = useState(false); // 🆕 State for Logo Lightbox
+  const [showLogo, setShowLogo] = useState(false); 
   
   const typedTitle = useTypewriter('EagleCourier International Shipping Services');
 
@@ -86,7 +86,6 @@ export default function App() {
     }
   }
 
-  // Fallback color if none is set
   const activeColor = data?.order?.status_color || '#3b82f6';
 
   return (
@@ -95,7 +94,6 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
           
-          {/* 🆕 Clickable Logo */}
           <div 
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
             onClick={() => setShowLogo(true)}
@@ -116,9 +114,20 @@ export default function App() {
 
       <main className="w-full max-w-md mx-auto px-4 py-12 flex flex-col">
         
-        <div className={`transition-all duration-500 ${data || loading ? 'mb-6' : 'mt-10 mb-12'}`}>
+        <div className={`transition-all duration-500 ${data || loading ? 'mb-6' : 'mt-4 mb-10'}`}>
           {!data && !loading && (
             <div className="text-center mb-8">
+              
+              {/* 🆕 Horizontally Focused Hero Logo */}
+              <div className="mb-5 flex justify-center">
+                <img 
+                  src="/EAGLE.jpg" 
+                  alt="EagleCourier Logo" 
+                  onClick={() => setShowLogo(true)}
+                  className="w-40 h-12 object-cover rounded-xl shadow-md border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" 
+                />
+              </div>
+
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Track your shipment</h1>
               <p className="text-slate-500 text-sm">Enter your tracking number below.</p>
             </div>
@@ -157,7 +166,6 @@ export default function App() {
                   <h2 className="text-xl font-bold text-slate-900">{data.order.item_name}</h2>
                 </div>
                 
-                {/* Dynamic Status Badge Color */}
                 <div 
                   className="px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap border"
                   style={{ 
@@ -179,7 +187,6 @@ export default function App() {
               <div className="flex items-center justify-between relative mt-4">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 -z-10 rounded-full" />
                 
-                {/* Dynamic Progress Line Color */}
                 <div 
                   className="absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-700 -z-10 rounded-full" 
                   style={{ 
@@ -193,7 +200,6 @@ export default function App() {
                   const isActive = idx === activeStep;
                   return (
                     <div key={step.label} className="flex flex-col items-center gap-2 bg-white px-2">
-                      {/* Dynamic Step Circle Color */}
                       <div 
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                           !isCompleted && !isActive ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'border-2'
@@ -265,7 +271,6 @@ export default function App() {
                         <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
                       )}
                       
-                      {/* Dynamic Timeline Dot Color */}
                       <div 
                         className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border"
                         style={{
@@ -364,7 +369,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🆕 Logo Lightbox Modal */}
+      {/* Logo Lightbox Modal */}
       {showLogo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
           <button 
