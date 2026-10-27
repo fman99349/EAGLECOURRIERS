@@ -117,16 +117,8 @@ export default function App() {
         <div className={`transition-all duration-500 ${data || loading ? 'mb-6' : 'mt-4 mb-10'}`}>
           {!data && !loading && (
             <div className="text-center mb-8">
+             
               
-                            {/* 🆕 Horizontally Focused Hero Logo */}
-              <div className="mb-6 flex justify-center">
-                <img 
-                  src="/EAGLE.jpg" 
-                  alt="EagleCourier Logo" 
-                  onClick={() => setShowLogo(true)}
-                  className="w-64 h-24 object-cover rounded-2xl shadow-md border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" 
-                />
-              </div>
 
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Track your shipment</h1>
               <p className="text-slate-500 text-sm">Enter your tracking number below.</p>
