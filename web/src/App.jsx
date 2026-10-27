@@ -85,6 +85,9 @@ export default function App() {
     }
   }
 
+  // Fallback color if none is set
+  const activeColor = data?.order?.status_color || '#3b82f6';
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200">
       
@@ -144,40 +147,68 @@ export default function App() {
                   <div className="text-xs font-bold text-blue-600 mb-1 tracking-wider">{data.order.order_number}</div>
                   <h2 className="text-xl font-bold text-slate-900">{data.order.item_name}</h2>
                 </div>
-                <div className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-bold whitespace-nowrap">
+                
+                {/* 🆕 Dynamic Status Badge Color */}
+                <div 
+                  className="px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap border"
+                  style={{ 
+                    backgroundColor: `${activeColor}15`, 
+                    borderColor: `${activeColor}30`, 
+                    color: activeColor 
+                  }}
+                >
                   {data.order.status_label}
                 </div>
               </div>
 
               <div className="mb-8 flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                <Globe size={14} className="text-blue-500" />
+                <Globe size={14} style={{ color: activeColor }} />
                 <span className="font-medium text-slate-700">Current Location:</span> 
                 {data.order.current_location || 'In Transit'}
               </div>
 
               <div className="flex items-center justify-between relative mt-4">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 -z-10 rounded-full" />
+                
+                {/* 🆕 Dynamic Progress Line Color */}
                 <div 
-                  className={`absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-700 -z-10 rounded-full ${isOnHold ? 'bg-amber-500' : 'bg-blue-600'}`}
-                  style={{ width: `${(activeStep / (STEPS.length - 1)) * 100}%` }} 
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-700 -z-10 rounded-full" 
+                  style={{ 
+                    width: `${(activeStep / (STEPS.length - 1)) * 100}%`,
+                    backgroundColor: isOnHold ? '#f59e0b' : activeColor
+                  }} 
                 />
+
                 {STEPS.map((step, idx) => {
                   const isCompleted = idx < activeStep;
                   const isActive = idx === activeStep;
                   return (
                     <div key={step.label} className="flex flex-col items-center gap-2 bg-white px-2">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                        isCompleted ? 'bg-blue-600 text-white' : 
-                        isActive ? (isOnHold ? 'bg-amber-100 text-amber-600 border-2 border-amber-500' : 'bg-blue-100 text-blue-600 border-2 border-blue-600') : 
-                        'bg-slate-100 text-slate-400 border border-slate-200'
-                      }`}>
+                      {/* 🆕 Dynamic Step Circle Color */}
+                      <div 
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                          !isCompleted && !isActive ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'border-2'
+                        }`}
+                        style={
+                          isCompleted 
+                            ? { backgroundColor: activeColor, borderColor: activeColor, color: '#fff' } 
+                            : isActive 
+                              ? { backgroundColor: `${activeColor}15`, borderColor: activeColor, color: activeColor } 
+                              : {}
+                        }
+                      >
                         {isCompleted ? <Check size={14} strokeWidth={3} /> : 
-                         isActive ? <div className={`w-2 h-2 rounded-full animate-pulse ${isOnHold ? 'bg-amber-500' : 'bg-blue-600'}`} /> : 
+                         isActive ? <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: activeColor }} /> : 
                          idx + 1}
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                        isActive ? (isOnHold ? 'text-amber-600' : 'text-blue-600') : isCompleted ? 'text-slate-700' : 'text-slate-400'
-                      }`}>
+                      <span 
+                        className="text-[10px] font-bold uppercase tracking-wider"
+                        style={
+                          isActive ? { color: activeColor } : 
+                          isCompleted ? { color: '#334155' } : 
+                          { color: '#94a3b8' }
+                        }
+                      >
                         {step.label}
                       </span>
                     </div>
@@ -191,7 +222,7 @@ export default function App() {
                 <div className="flex flex-col items-center gap-1 mt-1">
                   <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-400 bg-white" />
                   <div className="w-0.5 h-8 bg-slate-200" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: activeColor }} />
                 </div>
                 <div className="flex flex-col justify-between h-14 w-full text-sm">
                   <div className="flex justify-between text-slate-500">
@@ -225,11 +256,16 @@ export default function App() {
                         <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-200" />
                       )}
                       
-                      <div className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
-                        isLatest 
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-500/50' 
-                          : 'bg-blue-50 border-blue-200 text-blue-600'
-                      }`}>
+                      {/* 🆕 Dynamic Timeline Dot Color */}
+                      <div 
+                        className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border"
+                        style={{
+                          backgroundColor: isLatest ? ev.color : `${ev.color}15`,
+                          borderColor: ev.color,
+                          color: isLatest ? '#fff' : ev.color,
+                          boxShadow: isLatest ? `0 0 8px ${ev.color}80` : 'none'
+                        }}
+                      >
                         {isLatest ? (
                           <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                         ) : (
